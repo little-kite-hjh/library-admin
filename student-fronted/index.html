@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>座位大厅</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Microsoft YaHei}
+body{background:#f5f7fa}
+.navbar{background:#333;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.navbar a{color:#fff;text-decoration:none;margin-left:20px}
+.status-info{margin:20px}
+.status-item{display:inline-block;margin-right:15px}
+.status-color{display:inline-block;width:16px;height:16px;margin-right:4px;vertical-align:middle}
+.green{background:#67c23a}
+.red{background:#f56c6c}
+.gray{background:#909399}
+.refresh-btn{margin:0 20px 20px;padding:8px 16px;background:#409eff;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.seat-container{display:grid;grid-template-columns:repeat(8,1fr);gap:12px;max-width:800px;margin:0 auto;padding:0 20px}
+.seat{width:60px;height:60px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;cursor:pointer}
+.available{background:#67c23a}
+.reserved{background:#f56c6c}
+.maintain{background:#909399;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="navbar">
+<span>座位预约系统</span>
+<div>
+<a href="javascript:goIndex()">座位大厅</a>
+<a href="my.html">我的预约</a>
+<a href="javascript:logout()">退出登录</a>
+</div>
+</div>
+<div class="status-info">
+<div class="status-item"><span class="status-color green"></span>可预约</div>
+<div class="status-item"><span class="status-color red"></span>已预约</div>
+<div class="status-item"><span class="status-color gray"></span>维护中</div>
+</div>
+<button class="refresh-btn" onclick="refreshSeats()">刷新座位状态</button>
+<div class="seat-container" id="seatContainer"></div>
+
+<script>
+const seats = [
+  {id:1,number:'A1',status:'available'},
+  {id:2,number:'A2',status:'available'},
+  {id:3,number:'A3',status:'available'},
+  {id:4,number:'A4',status:'maintain'},
+  {id:5,number:'B1',status:'available'},
+  {id:6,number:'B2',status:'available'},
+  {id:7,number:'B3',status:'available'},
+  {id:8,number:'B4',status:'available'},
+  {id:9,number:'C1',status:'available'},
+  {id:10,number:'C2',status:'maintain'}
+]
+
+// 核心修复：每次切回来都强制同步
+function syncReservedSeats() {
+  let myReserves = JSON.parse(localStorage.getItem('myReserves') || '[]')
+  seats.forEach(s => s.status = 'available')
+  myReserves.forEach(item => {
+    let s = seats.find(x => x.id == item.seatId)
+    if (s) s.status = 'reserved'
+  })
+}
+
+function renderSeats() {
+  let el = document.getElementById('seatContainer')
+  el.innerHTML = ''
+  seats.forEach(seat => {
+    let d = document.createElement('div')
+    d.className = 'seat ' + seat.status
+    d.innerText = seat.number
+    d.onclick = () => handleSeatClick(seat)
+    el.appendChild(d)
+  })
+}
+
+function refreshSeats() {
+  syncReservedSeats()
+  renderSeats()
+}
+
+// 点击座位大厅 → 强制刷新页面（根治bug）
+function goIndex() {
+  window.location.href = "index.html"
+}
+
+function handleSeatClick(seat) {
+  if (seat.status === 'reserved') { alert('已被预约'); return }
+  if (seat.status === 'maintain') { alert('维护中'); return }
+  if (!confirm('确认预约 ' + seat.number + '？')) return
+
+  let myReserves = JSON.parse(localStorage.getItem('myReserves') || '[]')
+  myReserves.push({
+    seatId: seat.id,
+    seatNumber: seat.number,
+    endTime: Date.now() + 2 * 60 * 60 * 1000
+  })
+  localStorage.setItem('myReserves', JSON.stringify(myReserves))
+  refreshSeats()
+  alert('预约成功！')
+}
+
+function logout() {
+  localStorage.clear()
+  alert('已退出')
+  location.href = 'login.html'
+}
+
+window.onload = function() {
+  if (!localStorage.getItem('token')) {
+    alert('请先登录')
+    location.href = 'login.html'
+    return
+  }
+  refreshSeats()
+}
+</script>
+</body>
+</html>
